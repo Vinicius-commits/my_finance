@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:googleapis/chat/v1.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:my_finance/pages/register.dart';
 import 'package:my_finance/pages/home_page.dart';
-import 'package:my_finance/pages/user_data.dart';
 
 class LogInPage extends StatefulWidget {
   const LogInPage({super.key});
