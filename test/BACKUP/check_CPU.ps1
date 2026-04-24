@@ -1,0 +1,1 @@
+Get-Process dart, viewdir | Sort-Object CPU -Descending | Select Id,ProcessName,CPU,WorkingSet
