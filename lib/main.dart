@@ -16,6 +16,7 @@ import 'infrastructure/services/onedrive_backup_service.dart';
 import 'infrastructure/services/rule_based_investment_advisor_agent.dart';
 import 'presentation/bloc/finance_cubits.dart';
 import 'presentation/pages/login_page.dart';
+import 'presentation/widgets/app_lock_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -118,6 +119,8 @@ class _FinanceAppState extends State<FinanceApp> {
         BlocProvider.value(value: widget.contaCubit),
       ],
       child: MaterialApp(
+        builder: (context, child) =>
+            AppLockGate(child: child ?? const SizedBox.shrink()),
         title: 'Finanças Simples',
         theme: ThemeData(
           useMaterial3: true,

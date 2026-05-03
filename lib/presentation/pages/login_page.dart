@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../application/contracts/auth_contracts.dart';
+import '../../core/network_connectivity.dart';
 import '../../application/usecases/analytics_usecases.dart';
 import '../../application/usecases/cloud_sync_usecases.dart';
 import '../../domain/entities/finance_entities.dart';
@@ -55,10 +56,49 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _loginWithGmail() async {
+    final proceed = await _confirmGoogleDriveAccess();
+    if (!proceed) {
+      return;
+    }
+
     await _runLogin(
-      action: widget.authService.loginWithGmail,
+      action: () async {
+        await assertDeviceOnline();
+        return widget.authService.loginWithGmail();
+      },
       fallbackMessage: 'Falha no login com Gmail.',
     );
+  }
+
+  /// Explica o uso do Google Drive e pede confirmação antes do OAuth (escopos Drive).
+  Future<bool> _confirmGoogleDriveAccess() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Acesso ao Google Drive'),
+          content: const SingleChildScrollView(
+            child: Text(
+              'O app precisa da internet e da sua conta Google para gravar backups '
+              'na pasta de dados do aplicativo no Google Drive (não na sua galeria '
+              'nem em “Todos os arquivos”). '
+              'Na próxima tela, o Google pode pedir que você autorize esse acesso.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Continuar'),
+            ),
+          ],
+        );
+      },
+    );
+    return result ?? false;
   }
 
   Future<void> _loginWithOutlook() async {

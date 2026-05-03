@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../application/usecases/analytics_usecases.dart';
+import '../../core/network_connectivity.dart';
+import '../../infrastructure/services/biometric_lock_service.dart';
 import '../../application/usecases/cloud_sync_usecases.dart';
 import '../../domain/entities/finance_entities.dart';
 import '../bloc/finance_cubits.dart';
@@ -93,6 +96,9 @@ class _DashboardPageState extends State<DashboardPage>
 
     try {
       await _ensureDefaultAccount();
+      if (!mounted) {
+        return;
+      }
 
       final tx = Transaction(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -161,6 +167,7 @@ class _DashboardPageState extends State<DashboardPage>
 
     setState(() => _isBackingUp = true);
     try {
+      await assertDeviceOnline();
       await widget.backupFinanceSnapshotUseCase(widget.session);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -609,15 +616,111 @@ class _AdvisorTab extends StatelessWidget {
   }
 }
 
-class _CloudTab extends StatelessWidget {
+class _CloudTab extends StatefulWidget {
   final UserSession session;
   final VoidCallback? onBackupTap;
 
   const _CloudTab({required this.session, required this.onBackupTap});
 
   @override
+  State<_CloudTab> createState() => _CloudTabState();
+}
+
+class _CloudTabState extends State<_CloudTab> {
+  final BiometricLockService _biometric = BiometricLockService();
+  bool _lockEnabled = false;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshLockPref();
+  }
+
+  Future<void> _refreshLockPref() async {
+    final v = await _biometric.isLockEnabled();
+    if (mounted) {
+      setState(() => _lockEnabled = v);
+    }
+  }
+
+  Future<void> _onLockSwitch(bool value) async {
+    if (_busy) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      if (value) {
+        final hasBio = await _biometric.hasEnrolledBiometrics();
+        if (!mounted) {
+          return;
+        }
+        if (!hasBio) {
+          await showDialog<void>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Biometria indisponível'),
+              content: const Text(
+                'Cadastre impressão digital ou rosto nas configurações de segurança '
+                'do aparelho e tente de novo.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Ok'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await openAppSettings();
+                  },
+                  child: const Text('Abrir configurações'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+
+        final ok = await _biometric.unlock(
+          reason: 'Confirme para ativar o bloqueio com biometria',
+        );
+        if (!mounted) {
+          return;
+        }
+        if (!ok) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Autenticação necessária para ativar a proteção.'),
+            ),
+          );
+          return;
+        }
+        await _biometric.setLockEnabled(true);
+        if (mounted) {
+          setState(() => _lockEnabled = true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Proteção com biometria ativada.'),
+            ),
+          );
+        }
+      } else {
+        await _biometric.setLockEnabled(false);
+        if (mounted) {
+          setState(() => _lockEnabled = false);
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isGmail = session.authProvider == AuthProvider.gmail;
+    final isGmail = widget.session.authProvider == AuthProvider.gmail;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -633,19 +736,32 @@ class _CloudTab extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 6),
-                Text(session.email),
+                Text(widget.session.email),
                 Text(isGmail ? 'Destino: Google Drive' : 'Destino: OneDrive'),
                 const SizedBox(height: 14),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                    onPressed: onBackupTap,
+                    onPressed: widget.onBackupTap,
                     icon: const Icon(Icons.cloud_upload),
                     label: const Text('Salvar snapshot na nuvem'),
                   ),
                 ),
               ],
             ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: SwitchListTile.adaptive(
+            secondary: const Icon(Icons.fingerprint),
+            title: const Text('Bloquear app com biometria'),
+            subtitle: const Text(
+              'Ao abrir o app ou voltar do segundo plano, será pedida a digital '
+              '(ou Face ID). O sistema pode solicitar permissão de uso da biometria.',
+            ),
+            value: _lockEnabled,
+            onChanged: _busy ? null : _onLockSwitch,
           ),
         ),
       ],
