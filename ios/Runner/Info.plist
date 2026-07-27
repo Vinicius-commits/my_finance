@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>O app usa Face ID ou Touch ID para desbloquear o acesso às suas finanças.</string>
 </dict>
 </plist>

@@ -31,6 +31,7 @@ class TransactionModel {
   final DateTime date;
   final TransactionType type;
   final String accountId;
+  final String? categoryId;
 
   TransactionModel({
     required this.id,
@@ -39,9 +40,11 @@ class TransactionModel {
     required this.date,
     required this.type,
     required this.accountId,
+    this.categoryId,
   });
 
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
+    final rawCat = map['categoriaId']?.toString();
     return TransactionModel(
       id: map['id']?.toString() ?? '',
       description: map['descricao']?.toString() ?? '',
@@ -49,6 +52,7 @@ class TransactionModel {
       date: DateTime.tryParse(map['data']?.toString() ?? '') ?? DateTime.now(),
       type: TransactionTypeExtension.fromString(map['tipo']?.toString() ?? ''),
       accountId: map['contaId']?.toString() ?? '',
+      categoryId: (rawCat == null || rawCat.isEmpty) ? null : rawCat,
     );
   }
 
@@ -60,6 +64,39 @@ class TransactionModel {
       'data': date.toIso8601String(),
       'tipo': type.name,
       'contaId': accountId,
+      'categoriaId': categoryId,
+    };
+  }
+}
+
+class CategoryModel {
+  final String id;
+  final String name;
+  final TransactionType type;
+  final String colorArgbHex;
+
+  CategoryModel({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.colorArgbHex,
+  });
+
+  factory CategoryModel.fromMap(Map<String, dynamic> map) {
+    return CategoryModel(
+      id: map['id']?.toString() ?? '',
+      name: map['nome']?.toString() ?? '',
+      type: TransactionTypeExtension.fromString(map['tipo']?.toString() ?? ''),
+      colorArgbHex: map['cor']?.toString() ?? 'FF9E9E9E',
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'nome': name,
+      'tipo': type.name,
+      'cor': colorArgbHex,
     };
   }
 }

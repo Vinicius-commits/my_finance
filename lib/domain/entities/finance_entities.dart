@@ -1,6 +1,6 @@
 enum TransactionType { revenue, expense }
 
-enum AuthProvider { gmail, outlook }
+enum AuthProvider { gmail, outlook, deviceLocal }
 
 enum CloudProvider { googleDrive, oneDrive }
 
@@ -56,6 +56,8 @@ class Transaction {
   final DateTime date;
   final TransactionType type;
   final String accountId;
+  /// Identificador da categoria (receita/despesa); nulo = sem categoria.
+  final String? categoryId;
 
   Transaction({
     required this.id,
@@ -64,6 +66,57 @@ class Transaction {
     required this.date,
     required this.type,
     required this.accountId,
+    this.categoryId,
+  });
+
+  Transaction copyWith({
+    String? id,
+    String? description,
+    double? value,
+    DateTime? date,
+    TransactionType? type,
+    String? accountId,
+    String? categoryId,
+    bool clearCategoryId = false,
+  }) {
+    return Transaction(
+      id: id ?? this.id,
+      description: description ?? this.description,
+      value: value ?? this.value,
+      date: date ?? this.date,
+      type: type ?? this.type,
+      accountId: accountId ?? this.accountId,
+      categoryId: clearCategoryId ? null : (categoryId ?? this.categoryId),
+    );
+  }
+}
+
+/// Categoria configurável pelo usuário (receita ou despesa).
+class MovementCategory {
+  final String id;
+  final String name;
+  final TransactionType type;
+  /// Cor ARGB em hex sem prefixo, ex.: FF4CAF50
+  final String colorArgbHex;
+
+  const MovementCategory({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.colorArgbHex,
+  });
+}
+
+/// Fatia agregada para gráfico pizza.
+class CategorySlice {
+  final String label;
+  final double total;
+  final String colorArgbHex;
+
+  const CategorySlice({
+    required this.label,
+    required this.total,
+    required this.colorArgbHex,
   });
 }
 

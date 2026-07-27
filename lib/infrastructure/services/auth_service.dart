@@ -7,6 +7,7 @@ import 'package:googleapis_auth/googleapis_auth.dart';
 import '../../application/contracts/auth_contracts.dart';
 import '../../domain/entities/finance_entities.dart';
 import '../config/google_oauth_config.dart';
+import 'biometric_lock_service.dart';
 import 'google_auth_session.dart';
 import 'google_desktop_sign_in.dart'
     if (dart.library.html) 'google_desktop_sign_in_stub.dart' as google_desktop;
@@ -15,11 +16,14 @@ class AuthService implements IAuthService {
   AuthService({
     required GoogleSignIn googleSignIn,
     required GoogleAuthSession googleAuthSession,
+    BiometricLockService? deviceUnlockAuth,
   }) : _googleSignIn = googleSignIn,
-       _googleAuthSession = googleAuthSession;
+       _googleAuthSession = googleAuthSession,
+       _deviceUnlockAuth = deviceUnlockAuth ?? BiometricLockService();
 
   final GoogleSignIn _googleSignIn;
   final GoogleAuthSession _googleAuthSession;
+  final BiometricLockService _deviceUnlockAuth;
 
   GoogleSignIn get googleSignIn => _googleSignIn;
 
@@ -100,6 +104,37 @@ class AuthService implements IAuthService {
       displayName: account.displayName ?? account.email.split('@').first,
       email: account.email,
       authProvider: AuthProvider.gmail,
+      loggedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<UserSession> loginWithDeviceUnlock() async {
+    if (kIsWeb) {
+      throw Exception(
+        'Login por desbloqueio do aparelho não está disponível na web.',
+      );
+    }
+    final supported = await _deviceUnlockAuth.isDeviceCredentialAuthSupported();
+    if (!supported) {
+      throw Exception(
+        'Este ambiente não oferece autenticação local do aparelho. '
+        'Use um dispositivo Android ou iOS com bloqueio de tela configurado.',
+      );
+    }
+    final ok = await _deviceUnlockAuth.unlock(
+      reason: 'Desbloqueie o aparelho para entrar no modo de testes.',
+      biometricOnly: false,
+    );
+    if (!ok) {
+      throw Exception('Entrada cancelada ou autenticação falhou.');
+    }
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    return UserSession(
+      userId: 'device_local_$stamp',
+      displayName: 'Testes no aparelho',
+      email: 'modo-teste@local.aparelho',
+      authProvider: AuthProvider.deviceLocal,
       loggedAt: DateTime.now(),
     );
   }

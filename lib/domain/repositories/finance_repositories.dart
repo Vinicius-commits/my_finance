@@ -13,6 +13,12 @@ abstract class ILancamentoRepository {
   Future<void> deleteLancamento(String id);
 }
 
+abstract class ICategoriaRepository {
+  Future<List<MovementCategory>> getCategorias();
+  Future<void> saveCategoria(MovementCategory categoria);
+  Future<void> deleteCategoria(String id);
+}
+
 abstract class IMetaRepository {
   Future<List<Meta>> getMetas();
   Future<void> saveMeta(Meta meta);

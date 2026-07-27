@@ -16,6 +16,7 @@ import 'infrastructure/services/onedrive_backup_service.dart';
 import 'infrastructure/services/rule_based_investment_advisor_agent.dart';
 import 'presentation/bloc/finance_cubits.dart';
 import 'presentation/pages/login_page.dart';
+import 'presentation/widgets/app_lock_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,8 +27,14 @@ void main() async {
 
   final getLancamentos = GetLancamentosUseCase(lancamentoRepo);
   final addLancamento = AddLancamentoUseCase(lancamentoRepo);
+  final deleteLancamento = DeleteLancamentoUseCase(lancamentoRepo);
   final getContas = GetContasUseCase(contaRepo);
   final addConta = AddContaUseCase(contaRepo);
+
+  final categoriaRepo = CategoriaRepositoryImpl(datasource);
+  final getCategorias = GetCategoriasUseCase(categoriaRepo);
+  final saveCategoria = SaveCategoriaUseCase(categoriaRepo);
+  final deleteCategoria = DeleteCategoriaUseCase(categoriaRepo);
 
   final googleAuthSession = GoogleAuthSession();
   final googleSignIn = GoogleSignIn(
@@ -60,6 +67,7 @@ void main() async {
   final lancamentoCubit = LancamentoCubit(
     getLancamentos: getLancamentos,
     addLancamento: addLancamento,
+    deleteLancamento: deleteLancamento,
   );
 
   final contaCubit = ContaCubit(
@@ -67,10 +75,17 @@ void main() async {
     addConta: addConta,
   );
 
+  final categoriaCubit = CategoriaCubit(
+    getCategorias: getCategorias,
+    saveCategoria: saveCategoria,
+    deleteCategoria: deleteCategoria,
+  );
+
   runApp(
     FinanceApp(
       lancamentoCubit: lancamentoCubit,
       contaCubit: contaCubit,
+      categoriaCubit: categoriaCubit,
       authService: authService,
       backupFinanceSnapshotUseCase: backupFinanceSnapshotUseCase,
       buildFinanceSummaryUseCase: buildFinanceSummaryUseCase,
@@ -83,6 +98,7 @@ void main() async {
 class FinanceApp extends StatefulWidget {
   final LancamentoCubit lancamentoCubit;
   final ContaCubit contaCubit;
+  final CategoriaCubit categoriaCubit;
   final IAuthService authService;
   final BackupFinanceSnapshotUseCase backupFinanceSnapshotUseCase;
   final BuildFinanceSummaryUseCase buildFinanceSummaryUseCase;
@@ -93,6 +109,7 @@ class FinanceApp extends StatefulWidget {
     super.key,
     required this.lancamentoCubit,
     required this.contaCubit,
+    required this.categoriaCubit,
     required this.authService,
     required this.backupFinanceSnapshotUseCase,
     required this.buildFinanceSummaryUseCase,
@@ -116,8 +133,11 @@ class _FinanceAppState extends State<FinanceApp> {
       providers: [
         BlocProvider.value(value: widget.lancamentoCubit),
         BlocProvider.value(value: widget.contaCubit),
+        BlocProvider.value(value: widget.categoriaCubit),
       ],
       child: MaterialApp(
+        builder: (context, child) =>
+            AppLockGate(child: child ?? const SizedBox.shrink()),
         title: 'Finanças Simples',
         theme: ThemeData(
           useMaterial3: true,

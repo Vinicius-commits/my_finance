@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../application/contracts/auth_contracts.dart';
+import '../../core/network_connectivity.dart';
 import '../../application/usecases/analytics_usecases.dart';
 import '../../application/usecases/cloud_sync_usecases.dart';
 import '../../domain/entities/finance_entities.dart';
@@ -42,6 +43,22 @@ bool get _showDesktopGoogleOAuthHint {
   }
 }
 
+bool get _showDeviceUnlockLogin {
+  if (kIsWeb) {
+    return false;
+  }
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+    case TargetPlatform.iOS:
+    case TargetPlatform.macOS:
+      return true;
+    case TargetPlatform.windows:
+    case TargetPlatform.linux:
+    case TargetPlatform.fuchsia:
+      return false;
+  }
+}
+
 class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   final TextEditingController _outlookEmailController = TextEditingController();
@@ -55,10 +72,49 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _loginWithGmail() async {
+    final proceed = await _confirmGoogleDriveAccess();
+    if (!proceed) {
+      return;
+    }
+
     await _runLogin(
-      action: widget.authService.loginWithGmail,
+      action: () async {
+        await assertDeviceOnline();
+        return widget.authService.loginWithGmail();
+      },
       fallbackMessage: 'Falha no login com Gmail.',
     );
+  }
+
+  /// Explica o uso do Google Drive e pede confirmação antes do OAuth (escopos Drive).
+  Future<bool> _confirmGoogleDriveAccess() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Acesso ao Google Drive'),
+          content: const SingleChildScrollView(
+            child: Text(
+              'O app precisa da internet e da sua conta Google para gravar backups '
+              'na pasta de dados do aplicativo no Google Drive (não na sua galeria '
+              'nem em “Todos os arquivos”). '
+              'Na próxima tela, o Google pode pedir que você autorize esse acesso.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Continuar'),
+            ),
+          ],
+        );
+      },
+    );
+    return result ?? false;
   }
 
   Future<void> _loginWithOutlook() async {
@@ -73,6 +129,13 @@ class _LoginPageState extends State<LoginPage> {
         oneDriveAccessToken: _oneDriveTokenController.text,
       ),
       fallbackMessage: 'Falha no login com Outlook.',
+    );
+  }
+
+  Future<void> _loginWithDeviceUnlock() async {
+    await _runLogin(
+      action: widget.authService.loginWithDeviceUnlock,
+      fallbackMessage: 'Falha no login só aparelho.',
     );
   }
 
@@ -253,6 +316,39 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
+                  if (_showDeviceUnlockLogin) ...[
+                    const SizedBox(height: 12),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Login só neste aparelho (testes)',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'O sistema pedirá biometria, PIN ou senha do aparelho. '
+                              'Não há backup na nuvem neste modo.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed:
+                                    _isLoading ? null : _loginWithDeviceUnlock,
+                                icon: const Icon(Icons.smartphone),
+                                label: const Text('Entrar com desbloqueio do aparelho'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   if (_isLoading) ...[
                     const SizedBox(height: 18),
                     const Center(child: CircularProgressIndicator()),

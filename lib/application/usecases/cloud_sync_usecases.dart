@@ -82,6 +82,8 @@ class BackupFinanceSnapshotUseCase {
               'type': transaction.type.name,
               'accountId': transaction.accountId,
               'date': transaction.date.toIso8601String(),
+              if (transaction.categoryId != null)
+                'categoryId': transaction.categoryId,
             },
           )
           .toList(),
