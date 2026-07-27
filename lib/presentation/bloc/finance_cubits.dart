@@ -24,12 +24,15 @@ class LancamentoError extends LancamentoState {
 class LancamentoCubit extends Cubit<LancamentoState> {
   final GetLancamentosUseCase _getLancamentos;
   final AddLancamentoUseCase _addLancamento;
+  final DeleteLancamentoUseCase _deleteLancamento;
 
   LancamentoCubit({
     required GetLancamentosUseCase getLancamentos,
     required AddLancamentoUseCase addLancamento,
+    required DeleteLancamentoUseCase deleteLancamento,
   }) : _getLancamentos = getLancamentos,
        _addLancamento = addLancamento,
+       _deleteLancamento = deleteLancamento,
        super(LancamentoInitial());
 
   // Carrega todos os lançamentos do banco
@@ -50,6 +53,15 @@ class LancamentoCubit extends Cubit<LancamentoState> {
       await loadLancamentos(); // atualiza a tela automaticamente
     } catch (e) {
       emit(LancamentoError('Erro ao salvar lançamento'));
+    }
+  }
+
+  Future<void> deleteLancamento(String id) async {
+    try {
+      await _deleteLancamento(id);
+      await loadLancamentos();
+    } catch (e) {
+      emit(LancamentoError('Erro ao excluir lançamento'));
     }
   }
 }
@@ -102,6 +114,67 @@ class ContaCubit extends Cubit<ContaState> {
       await loadContas();
     } catch (e) {
       emit(ContaError('Erro ao salvar conta'));
+    }
+  }
+}
+
+// ─── ESTADOS: CATEGORIAS ─────────────────────────────────────────────────────
+
+abstract class CategoriaState {}
+
+class CategoriaInitial extends CategoriaState {}
+
+class CategoriaLoading extends CategoriaState {}
+
+class CategoriaLoaded extends CategoriaState {
+  final List<MovementCategory> categorias;
+  CategoriaLoaded(this.categorias);
+}
+
+class CategoriaError extends CategoriaState {
+  final String message;
+  CategoriaError(this.message);
+}
+
+class CategoriaCubit extends Cubit<CategoriaState> {
+  final GetCategoriasUseCase _getCategorias;
+  final SaveCategoriaUseCase _saveCategoria;
+  final DeleteCategoriaUseCase _deleteCategoria;
+
+  CategoriaCubit({
+    required GetCategoriasUseCase getCategorias,
+    required SaveCategoriaUseCase saveCategoria,
+    required DeleteCategoriaUseCase deleteCategoria,
+  }) : _getCategorias = getCategorias,
+       _saveCategoria = saveCategoria,
+       _deleteCategoria = deleteCategoria,
+       super(CategoriaInitial());
+
+  Future<void> loadCategorias() async {
+    emit(CategoriaLoading());
+    try {
+      final lista = await _getCategorias();
+      emit(CategoriaLoaded(lista));
+    } catch (_) {
+      emit(CategoriaError('Erro ao carregar categorias'));
+    }
+  }
+
+  Future<void> saveCategoria(MovementCategory categoria) async {
+    try {
+      await _saveCategoria(categoria);
+      await loadCategorias();
+    } catch (_) {
+      emit(CategoriaError('Erro ao salvar categoria'));
+    }
+  }
+
+  Future<void> deleteCategoria(String id) async {
+    try {
+      await _deleteCategoria(id);
+      await loadCategorias();
+    } catch (_) {
+      emit(CategoriaError('Erro ao excluir categoria'));
     }
   }
 }

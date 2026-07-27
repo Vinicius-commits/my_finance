@@ -9,6 +9,15 @@ class BiometricLockService {
 
   final LocalAuthentication _auth;
 
+  /// Há suporte a prompt de credencial do sistema (biometria, PIN, padrão, etc.).
+  Future<bool> isDeviceCredentialAuthSupported() async {
+    try {
+      return await _auth.isDeviceSupported();
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> isLockEnabled() async {
     final p = await SharedPreferences.getInstance();
     return p.getBool(_prefsKey) ?? false;

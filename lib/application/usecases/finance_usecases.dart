@@ -22,6 +22,14 @@ class GetLancamentosUseCase {
   }
 }
 
+class DeleteLancamentoUseCase {
+  final ILancamentoRepository repository;
+
+  DeleteLancamentoUseCase(this.repository);
+
+  Future<void> call(String id) => repository.deleteLancamento(id);
+}
+
 // Casos de uso para Contas
 class GetContasUseCase {
   final IContaRepository repository;
@@ -52,4 +60,29 @@ class GetMetasUseCase {
   Future<List<Meta>> call() async {
     return await repository.getMetas();
   }
+}
+
+class GetCategoriasUseCase {
+  final ICategoriaRepository repository;
+
+  GetCategoriasUseCase(this.repository);
+
+  Future<List<MovementCategory>> call() => repository.getCategorias();
+}
+
+class SaveCategoriaUseCase {
+  final ICategoriaRepository repository;
+
+  SaveCategoriaUseCase(this.repository);
+
+  Future<void> call(MovementCategory categoria) =>
+      repository.saveCategoria(categoria);
+}
+
+class DeleteCategoriaUseCase {
+  final ICategoriaRepository repository;
+
+  DeleteCategoriaUseCase(this.repository);
+
+  Future<void> call(String id) => repository.deleteCategoria(id);
 }

@@ -43,6 +43,22 @@ bool get _showDesktopGoogleOAuthHint {
   }
 }
 
+bool get _showDeviceUnlockLogin {
+  if (kIsWeb) {
+    return false;
+  }
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+    case TargetPlatform.iOS:
+    case TargetPlatform.macOS:
+      return true;
+    case TargetPlatform.windows:
+    case TargetPlatform.linux:
+    case TargetPlatform.fuchsia:
+      return false;
+  }
+}
+
 class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   final TextEditingController _outlookEmailController = TextEditingController();
@@ -113,6 +129,13 @@ class _LoginPageState extends State<LoginPage> {
         oneDriveAccessToken: _oneDriveTokenController.text,
       ),
       fallbackMessage: 'Falha no login com Outlook.',
+    );
+  }
+
+  Future<void> _loginWithDeviceUnlock() async {
+    await _runLogin(
+      action: widget.authService.loginWithDeviceUnlock,
+      fallbackMessage: 'Falha no login só aparelho.',
     );
   }
 
@@ -293,6 +316,39 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
+                  if (_showDeviceUnlockLogin) ...[
+                    const SizedBox(height: 12),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Login só neste aparelho (testes)',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'O sistema pedirá biometria, PIN ou senha do aparelho. '
+                              'Não há backup na nuvem neste modo.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed:
+                                    _isLoading ? null : _loginWithDeviceUnlock,
+                                icon: const Icon(Icons.smartphone),
+                                label: const Text('Entrar com desbloqueio do aparelho'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   if (_isLoading) ...[
                     const SizedBox(height: 18),
                     const Center(child: CircularProgressIndicator()),

@@ -53,6 +53,7 @@ class TransactionRepositoryImpl implements ILancamentoRepository {
             date: model.date,
             type: model.type,
             accountId: model.accountId,
+            categoryId: model.categoryId,
           ),
         )
         .toList();
@@ -67,6 +68,7 @@ class TransactionRepositoryImpl implements ILancamentoRepository {
       date: lancamento.date,
       type: lancamento.type,
       accountId: lancamento.accountId,
+      categoryId: lancamento.categoryId,
     );
     await datasource.saveLancamentoModel(model);
   }
@@ -74,6 +76,43 @@ class TransactionRepositoryImpl implements ILancamentoRepository {
   @override
   Future<void> deleteLancamento(String id) async {
     await datasource.deleteLancamentoModel(id);
+  }
+}
+
+class CategoriaRepositoryImpl implements ICategoriaRepository {
+  final IFinanceDatasource datasource;
+
+  CategoriaRepositoryImpl(this.datasource);
+
+  @override
+  Future<List<MovementCategory>> getCategorias() async {
+    final models = await datasource.getCategoryModels();
+    return models
+        .map(
+          (m) => MovementCategory(
+            id: m.id,
+            name: m.name,
+            type: m.type,
+            colorArgbHex: m.colorArgbHex,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<void> saveCategoria(MovementCategory categoria) async {
+    final model = CategoryModel(
+      id: categoria.id,
+      name: categoria.name,
+      type: categoria.type,
+      colorArgbHex: categoria.colorArgbHex,
+    );
+    await datasource.saveCategoryModel(model);
+  }
+
+  @override
+  Future<void> deleteCategoria(String id) async {
+    await datasource.deleteCategoryModel(id);
   }
 }
 
